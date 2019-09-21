@@ -1,0 +1,312 @@
+# Copyright 1999 Kevin Closson
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#    http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+MENU
+	INTRODUCTION
+	INTRODUCING THE pgio.conf FILE
+	LOADING DATA WITH THE setup.sh SCRIPT
+	VALIDATING THE DATA LOADED BY THE setup.sh SCRIPT
+	TESTING I/O WITH THE runit.sh SCRIPT
+	REDUCING THE AMOUNT OF SYSTEM MEMORY AVAILABLE TO THE OS PAGE CACHE (FILE SYSTEM BUFFER CACHE)
+	TESTING I/O AFTER REDUCING THE SIZE OF THE OS PAGE CACHE
+	VALIDATING PHYSICAL I/O WITH THE iostat.out FILE
+	LOADING ONE TERABYTE TEST DATA WITH THE setup.sh SCRIPT
+	TESTING WITH THE ONE TERABYTE ACTIVE DATA SET WITH THE runit.sh SCRIPT
+
+INTRODUCTION
+------------
+This is the pgio software package. If you don't know SLOB very well it might not
+be all that simple to understand. Please visit www.kevinclosson.net for more
+information or search the web for "pgio" as there is quite a lot of information 
+available, onlinem, from pgio beta release users.
+
+
+INTRODUCING THE pgio.conf FILE
+------------------------------
+This is a very brief description of what the pgio.conf parameters effect:
+
+
+UPDATE_PCT                   - The percentage of SQL that will be UPDATE DML
+RUN_TIME                     - runit.sh run duration in seconds
+NUM_SCHEMAS                  - pgio data is loaded into either a big single schema or multiple.
+                               NUM_SCHEMAS directs setup.sh to create and load NUM_SCHEMAS
+                               schemas. 
+NUM_THREADS                  - For setup.sh:
+                                   * This parameter controls the number of concurrent 
+                                     data loading streams. 
+ 
+                             - For runit.sh:  
+                                   * This parameter controls how many sessions will attach to 
+                                     each NUM_SCHEMAS schema.
+                               
+                               For example, if NUM_SCHEMAS is set to 32 and NUM_THREADS is set
+                               to 8, setup.sh will load data into 32 schemas in batches of
+                               8 concurrent data laoding streams. On the other hand, if set to the 
+                               same 32 and 8 respectively for NUM_SCHEMAS and NUM_THREADS then 
+                               runit.sh will run 8 sessions accessing each of the 32 schemas for a
+                               total of 256 sessions.
+WORK_UNIT                    - WORK_UNIT controls the bounds of the BETWEEN clause for each 
+                               SELECT statement as it executes. For example, if set to 255
+                               each SELECT will visit 255 random blocks. Smaller values require
+                               more SQL executions to drive the same IOPS.
+UPDATE_WORK_UNIT             - UPDATE_WORK_UNIT is the UPDATE DML corollary for WORK_UNIT. This
+                               allows for a mixed SELECT/UPDATE workload where SELECT statements
+                               can visit more blocks than UPDATES.
+SCALE                        - The amount of data to load into each schema. Values can be N as
+                               a number of 8KB blocks or N modified with [MG] for megabytes or
+                               gigabytes. For example, if set to 1024 setup.sh will load 8MB 
+                               ( 1024 * 8192 bytes) into each schema whereas set to 1024M will load 
+                               1024 megabytes into each schema.
+
+DBNAME                       - The PostgreSQL database that holds the pgio objects
+CONNECT_STRING               - This parameter is passed to the psql command. The pgio kit expects that
+                               .pgpass and all other authentication is configured. For example,
+                               if CONNECT_STRING is set to "pg10" then the following command must
+                               succeed in your pgio environment:
+                              
+                               $ psql pg10
+
+CREATE_BASE_TABLE            - The loader, setup.sh, creates a dense "seed" table as the source from 
+                               which to load the test tables. This seed table persists after 
+                               setup.sh exits. If this parameter is set to true the seed table will not
+                               be regenerated.
+
+
+Loading Data With the setup.sh SCRIPT
+-------------------------------------
+
+$ cat pgio.conf
+
+UPDATE_PCT=0
+RUN_TIME=120
+NUM_SCHEMAS=16
+NUM_THREADS=8
+WORK_UNIT=255
+UPDATE_WORK_UNIT=8
+SCALE=8G
+
+DBNAME=pg10
+CONNECT_STRING="pg10"
+
+CREATE_BASE_TABLE=TRUE
+
+$ 
+$ sh ./setup.sh
+
+Job info:      Loading 8G scale into 16 schemas as per pgio.conf->NUM_SCHEMAS.
+Batching info: Loading 8 schemas per batch as per pgio.conf->NUM_THREADS.
+Base table loading time: 9 seconds.
+Waiting for batch. Global schema count: 8. Elapsed: 0 seconds.
+Waiting for batch. Global schema count: 15. Elapsed: 59 seconds.
+Waiting for batch. Global schema count: 16. Elapsed: 111 seconds.
+
+Group data loading phase complete.         Elapsed: 136 seconds.
+$ 
+$ 
+
+
+VALIDATING THE DATA LOADED BY THE setup.sh SCRIPT
+-------------------------------------------------
+
+
+$ 
+$ echo '\d+' | psql pg10
+                            List of relations
+ Schema |       Name       | Type  |  Owner   |    Size    | Description 
+--------+------------------+-------+----------+------------+-------------
+ public | pgio1            | table | postgres | 8192 MB    | 
+ public | pgio10           | table | postgres | 8192 MB    | 
+ public | pgio11           | table | postgres | 8192 MB    | 
+ public | pgio12           | table | postgres | 8192 MB    | 
+ public | pgio13           | table | postgres | 8192 MB    | 
+ public | pgio14           | table | postgres | 8192 MB    | 
+ public | pgio15           | table | postgres | 8192 MB    | 
+ public | pgio16           | table | postgres | 8192 MB    | 
+ public | pgio2            | table | postgres | 8192 MB    | 
+ public | pgio3            | table | postgres | 8192 MB    | 
+ public | pgio4            | table | postgres | 8192 MB    | 
+ public | pgio5            | table | postgres | 8192 MB    | 
+ public | pgio6            | table | postgres | 8192 MB    | 
+ public | pgio7            | table | postgres | 8192 MB    | 
+ public | pgio8            | table | postgres | 8192 MB    | 
+ public | pgio9            | table | postgres | 8192 MB    | 
+ public | pgio_audit_table | table | postgres | 8192 bytes | 
+ public | pgio_base        | table | postgres | 1170 MB    | 
+(18 rows)
+
+$ 
+
+
+TESTING I/O WITH THE runit.sh SCRIPT
+------------------------------------
+
+$ 
+$ 
+$ cat pgio.conf
+
+UPDATE_PCT=0
+RUN_TIME=120
+NUM_SCHEMAS=16
+NUM_THREADS=8
+WORK_UNIT=255
+UPDATE_WORK_UNIT=8
+SCALE=8G
+
+DBNAME=pg10
+CONNECT_STRING="pg10"
+
+CREATE_BASE_TABLE=TRUE
+
+$ 
+$ sh ./runit.sh
+Date: Tue May 22 16:30:36 UTC 2018
+Database connect string: "pg10". 
+Shared buffers: 1GB. 
+Testing 16 schemas with 8 thread(s) accessing 8G (1048576 blocks) of each schema.
+Running iostat, vmstat and mpstat on current host--in background.
+Launching sessions. 16 schema(s) will be accessed by 8 thread(s) each.
+pg_stat_database stats:
+          datname| blks_hit| blks_read|tup_returned|tup_fetched|tup_updated
+BEFORE:  pg10    | 792845449 | 1708568898 |   1803194168 |  1510064234 |     5536938
+AFTER:   pg10    | 793924241 | 1767645677 |   1862352512 |  1569219899 |     5536938
+DBNAME:  pg10. 16 schemas, 8 threads(each). Run time: 120 seconds. RIOPS >492306< CACHE_HITS/s >8989<
+
+$
+$
+
+
+
+REDUCING THE AMOUNT OF SYSTEM MEMORY AVAILABLE TO THE OS PAGE CACHE (FILE SYSTEM BUFFER CACHE)
+----------------------------------------------------------------------------------------------
+# 
+# 
+# sh ./pgio_reduce_free_memory.sh
+Usage: ./pgio_reduce_free_memory.sh <integer amount of memory (in gigabytes) to remain free.>
+# 
+# sh ./pgio_reduce_free_memory.sh 16
+
+
+Enter "YES" to consume free memory leaving only 16GB free ( 3.3 % of all RAM) : YES
+Taking action to reduce free memory down to 16GB available.
+              total        used        free      shared  buff/cache   available
+Mem:      503413700     4321864   498782052       33868      309784   496886768
+Swap:             0           0           0
+
+Attempting to allocate 235354 huge pages
+MemAvailable:   16026932 kB
+HugePages_Total:   235354
+# 
+# free -h
+              total        used        free      shared  buff/cache   available
+Mem:           480G        462G         17G         33M        301M         15G
+Swap:            0B          0B          0B
+# 
+# exit
+exit
+$ 
+
+TESTING I/O AFTER REDUCING THE SIZE OF THE OS PAGE CACHE
+--------------------------------------------------------
+
+$ 
+$ sh ./runit.sh
+Date: Tue May 22 16:39:58 UTC 2018
+Database connect string: "pg10". 
+Shared buffers: 1GB. 
+Testing 16 schemas with 8 thread(s) accessing 8G (1048576 blocks) of each schema.
+Running iostat, vmstat and mpstat on current host--in background.
+Launching sessions. 16 schema(s) will be accessed by 8 thread(s) each.
+pg_stat_database stats:
+          datname| blks_hit| blks_read|tup_returned|tup_fetched|tup_updated
+BEFORE:  pg10    | 793926878 | 1767645848 |   1862362328 |  1569220779 |     5536940
+AFTER:   pg10    | 794529712 | 1796882661 |   1891681812 |  1598537584 |     5536962
+DBNAME:  pg10. 16 schemas, 8 threads(each). Run time: 120 seconds. RIOPS >243640< CACHE_HITS/s >5023<
+
+$ 
+$ 
+
+VALIDATING PHYSICAL I/O WITH THE iostat.out FILE
+------------------------------------------------
+
+$ 
+$ mount | grep data
+/dev/md127 on /data type xfs (rw,relatime,seclabel,attr2,inode64,sunit=2048,swidth=16384,noquota)
+$ grep Device iostat.out | tail -1; grep '^md127' iostat.out | head -10
+Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+md127             0.00     0.00  716.23  100.24     7.11     2.65    24.47     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 263726.33  212.33  2318.33     1.86    18.00     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 267530.67  181.67  2875.68     1.53    22.01     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 248699.00  201.33  2834.69     1.74    23.34     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 242310.70  224.08  2734.00     1.89    23.10     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 237546.00  201.67  2638.42     1.71    22.74     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 233098.67  180.07  2680.31     1.54    23.54     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 240512.00  181.33  2706.39     1.53    23.04     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 237074.67  180.00  2669.72     1.49    23.06     0.00    0.00    0.00    0.00   0.00   0.00
+md127             0.00     0.00 233455.33  116.67  2630.99     0.98    23.08     0.00    0.00    0.00    0.00   0.00   0.00
+$ 
+$ 
+
+LOADING ONE TERABYTE TEST DATA WITH THE setup.sh SCRIPT
+-------------------------------------------------------
+$ 
+$ cat pgio.conf
+
+UPDATE_PCT=0
+RUN_TIME=120
+NUM_SCHEMAS=16
+NUM_THREADS=16
+WORK_UNIT=255
+UPDATE_WORK_UNIT=8
+SCALE=64G
+
+DBNAME=pg10
+CONNECT_STRING="pg10"
+
+CREATE_BASE_TABLE=TRUE
+
+$ sh ./setup.sh
+
+Job info:      Loading 64G scale into 16 schemas as per pgio.conf->NUM_SCHEMAS.
+Batching info: Loading 16 schemas per batch as per pgio.conf->NUM_THREADS.
+Base table loading time: 112 seconds.
+Waiting for batch. Global schema count: 16. Elapsed: 0 seconds.
+Waiting for batch. Global schema count: 16. Elapsed: 2052 seconds.
+
+Group data loading phase complete.         Elapsed: 2052 seconds.
+$ 
+
+TESTING WITH THE ONE TERABYTE ACTIVE DATA SET WITH THE runit.sh SCRIPT
+----------------------------------------------------------------------
+
+
+
+$ 
+$ sh ./runit.sh
+Date: Tue May 22 18:59:25 UTC 2018
+Database connect string: "pg10". 
+Shared buffers: 1GB. 
+Testing 16 schemas with 32 thread(s) accessing 64G (8388608 blocks) of each schema.
+Running iostat, vmstat and mpstat on current host--in background.
+Launching sessions. 16 schema(s) will be accessed by 32 thread(s) each.
+Sessions launched. NOTE: Launching the sessions took 288 seconds.
+pg_stat_database stats:
+          datname| blks_hit| blks_read|tup_returned|tup_fetched|tup_updated
+BEFORE:  pg10    | 325562895 | 349278820 |    249077711 |   114757082 |         201
+AFTER:   pg10    | 325909798 | 365573275 |    265373121 |   131049941 |         201
+DBNAME:  pg10. 16 schemas, 32 threads(each). Run time: 123 seconds. RIOPS >390969< CACHE_HITS/s >7795<
+
+$ 
+$ 
+
