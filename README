@@ -30,7 +30,7 @@ INTRODUCTION
 This is the pgio software package. If you don't know SLOB very well it might not
 be all that simple to understand. Please visit www.kevinclosson.net for more
 information or search the web for "pgio" as there is quite a lot of information 
-available, onlinem, from pgio beta release users.
+available, online, from pgio beta release users.
 
 
 INTRODUCING THE pgio.conf FILE
@@ -114,14 +114,11 @@ Waiting for batch. Global schema count: 16. Elapsed: 111 seconds.
 
 Group data loading phase complete.         Elapsed: 136 seconds.
 $ 
-$ 
 
 
 VALIDATING THE DATA LOADED BY THE setup.sh SCRIPT
 -------------------------------------------------
 
-
-$ 
 $ echo '\d+' | psql pg10
                             List of relations
  Schema |       Name       | Type  |  Owner   |    Size    | Description 
@@ -152,8 +149,6 @@ $
 TESTING I/O WITH THE runit.sh SCRIPT
 ------------------------------------
 
-$ 
-$ 
 $ cat pgio.conf
 
 UPDATE_PCT=0
@@ -184,8 +179,6 @@ AFTER:   pg10    | 793924241 | 1767645677 |   1862352512 |  1569219899 |     553
 DBNAME:  pg10. 16 schemas, 8 threads(each). Run time: 120 seconds. RIOPS >492306< CACHE_HITS/s >8989<
 
 $
-$
-
 
 
 REDUCING THE AMOUNT OF SYSTEM MEMORY AVAILABLE TO THE OS PAGE CACHE (FILE SYSTEM BUFFER CACHE)
@@ -217,10 +210,10 @@ Swap:            0B          0B          0B
 exit
 $ 
 
+
 TESTING I/O AFTER REDUCING THE SIZE OF THE OS PAGE CACHE
 --------------------------------------------------------
 
-$ 
 $ sh ./runit.sh
 Date: Tue May 22 16:39:58 UTC 2018
 Database connect string: "pg10". 
@@ -235,12 +228,11 @@ AFTER:   pg10    | 794529712 | 1796882661 |   1891681812 |  1598537584 |     553
 DBNAME:  pg10. 16 schemas, 8 threads(each). Run time: 120 seconds. RIOPS >243640< CACHE_HITS/s >5023<
 
 $ 
-$ 
+
 
 VALIDATING PHYSICAL I/O WITH THE iostat.out FILE
 ------------------------------------------------
 
-$ 
 $ mount | grep data
 /dev/md127 on /data type xfs (rw,relatime,seclabel,attr2,inode64,sunit=2048,swidth=16384,noquota)
 $ grep Device iostat.out | tail -1; grep '^md127' iostat.out | head -10
@@ -256,11 +248,11 @@ md127             0.00     0.00 240512.00  181.33  2706.39     1.53    23.04    
 md127             0.00     0.00 237074.67  180.00  2669.72     1.49    23.06     0.00    0.00    0.00    0.00   0.00   0.00
 md127             0.00     0.00 233455.33  116.67  2630.99     0.98    23.08     0.00    0.00    0.00    0.00   0.00   0.00
 $ 
-$ 
+
 
 LOADING ONE TERABYTE TEST DATA WITH THE setup.sh SCRIPT
 -------------------------------------------------------
-$ 
+
 $ cat pgio.conf
 
 UPDATE_PCT=0
@@ -287,12 +279,10 @@ Waiting for batch. Global schema count: 16. Elapsed: 2052 seconds.
 Group data loading phase complete.         Elapsed: 2052 seconds.
 $ 
 
+
 TESTING WITH THE ONE TERABYTE ACTIVE DATA SET WITH THE runit.sh SCRIPT
 ----------------------------------------------------------------------
 
-
-
-$ 
 $ sh ./runit.sh
 Date: Tue May 22 18:59:25 UTC 2018
 Database connect string: "pg10". 
@@ -308,5 +298,3 @@ AFTER:   pg10    | 325909798 | 365573275 |    265373121 |   131049941 |         
 DBNAME:  pg10. 16 schemas, 32 threads(each). Run time: 123 seconds. RIOPS >390969< CACHE_HITS/s >7795<
 
 $ 
-$ 
-
